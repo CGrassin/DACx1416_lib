@@ -1,11 +1,11 @@
 #include <Arduino.h>
-#include "dac81404.h"
+#include "dacx1416.h"
 
 #define DAC_CS 10
-#define DAC_RST 28
+#define DAC_RST 28 // Optionnal
 #define DAC_LDAC -1
 
-DAC81404 dac(DAC_CS, DAC_RST, DAC_LDAC, &SPI, 30000000);
+DACX1416 dac(DAC_CS, DAC_RST, DAC_LDAC, &SPI, 8000000);
 
 void setup() {
   Serial.begin(115200);
@@ -13,58 +13,57 @@ void setup() {
 
   Serial.println("init");
 
+  // Read device ID
+  Serial.print("DEVICE ID=");
+  Serial.println(dac.read_reg(R_DEVICEID), HEX);
+
   int res = dac.init();
-  if(res==0) Serial.printf("DAC81404 init success\n");
+  if(res==0) Serial.println("DACX1416 init success");
 
   // int ref
   dac.set_int_reference(false);
-  Serial.printf("internal ref stat = %d\n", dac.get_int_reference());
+  Serial.print("internal ref stat =");
+  Serial.println(dac.get_int_reference());
 
-  // power up ch0,1,2,3
-  dac.set_ch_enabled(0, true);
-  dac.set_ch_enabled(1, true);
-  dac.set_ch_enabled(2, true);
-  dac.set_ch_enabled(3, true);
-  
+  // power up all 16 channels
+  for(int i=0; i<16; i++){
+    dac.set_ch_enabled(i, true);
+  }
+
   // check channel power status
-  for(int i=0; i<4; i++) Serial.printf("ch %d power -> %d\n", i, dac.get_ch_enabled(i));
-  Serial.println();
+  for(int i=0; i<16; i++){
+    Serial.print("ch ");
+    Serial.print(i);
+    Serial.print(" power -> ");
+    Serial.println(dac.get_ch_enabled(i));
+  }
 
   // Now set range, U = Unipolar, B=Bipolar; 
-  dac.set_range(0, DAC81404::U_10); //   0 -> +10V
-  dac.set_range(1, DAC81404::B_5);  //  -5 -> +5V
-  dac.set_range(2, DAC81404::U_6);  //   0 -> +6V
-  dac.set_range(3, DAC81404::B_10); // -10 -> +10V
+  dac.set_range(0, DACX1416::U_10); //   0 -> +10V
+  dac.set_range(1, DACX1416::B_5);  //  -5 -> +5V
+  dac.set_range(2, DACX1416::B_2V5);//  -2.5 -> +2.5V
+  dac.set_range(3, DACX1416::B_10); // -10 -> +10V
+  // Other ranges are set to default (U_5)
   
-  // try to read range
-  for(int i=0; i<4; i++) Serial.printf("ch %d range -> %d\n", i, dac.get_range(i));
+  // Read range
+  for(int i=0; i<16; i++){
+    Serial.print("ch ");
+    Serial.print(i);
+    Serial.print(" range -> ");
+    Serial.println(dac.get_range(i), HEX);
+  }
 
-  //dac.set_sync(1, DAC81404::SYNC_LDAC);
-  //dac.set_sync(0, DAC81404::SYNC_SS);
-
-
+  //dac.set_sync(1, DACX1416::SYNC_LDAC);
+  //dac.set_sync(0, DACX1416::SYNC_SS);
 }
 
-uint16_t i = 0;
-bool done = true;
+uint16_t j = 0;
 
 void loop() {
-  dac.set_out(0, (i)%65535 );
-  dac.set_out(1, (2*i)%65535 );
-  dac.set_out(2, (3*i)%65535 );
-  dac.set_out(3, (4*i)%65535);
+  for(int i=0; i<16; i++){
+    dac.set_out(i, (i*j)%65535 );
+  }
 
-  i = (i+64)%65535;  
+  j = (j+16)%65535;  
   delayMicroseconds(1);
-
-  
-  /*
-  if(millis()>10000 && done) {
-    dac.set_ch_enabled(2, false);
-    Serial.println("ch 2 shutdown");
-    for(int i=0; i<4; i++) Serial.printf("ch %d power -> %d\n", i, dac.get_ch_enabled(i));
-    Serial.println();
-    done = false;
-  } */
-
 }

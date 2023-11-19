@@ -1,17 +1,21 @@
-# DAC81404_lib
-A basic BETA library for TI's DAC81404 precision DAC and the associated DAC81404EVM
-
-The channel D of DAC81404 in the Evaluation Module (DAC81404EVM) is problematic where the sense pins are "intentionally"(?) reversed. A solution can be found [here](https://e2e.ti.com/support/data-converters-group/data-converters/f/data-converters-forum/980539/dac81404evm-weird-behavior-of-one-dac-channel).
+# DACX1416_lib
+A basic library for TI's DAC81416, DAC71416 and DAC61416 DACs and the associated DAC81416EVM.
 
 **See `main.cpp` for an working example. Compile with Arduino IDE or PlatformIO.**
 
 **Platforms:**
-I tested the code with Teensy 3.x & 4.x. The code should work for other platforms as well. Please report if something is amiss.
+
+I tested the code with Arduino Due and DAC81416EVM. The code should work for other platforms as well. Please report if something is amiss.
 
 **Limitations:**
-1. BETA versions - some bugs may exist. Please report if you encounter one. 
+1. Some bugs may exist. Please report if you encounter one. 
 2. LDAC pin is not handled by the library.
+3. "Advanced" features like broadcast, toggle, offset, etc. don't have a helper function in this library. They can however be accessed with the `write_reg()` and `read_reg()` methods.
 
 **TODO:**
 1. Code cleanup
 2. Add more examples and follow standard Arduino library format
+
+**Credits:**
+
+Thanks to [sphCow](https://github.com/sphCow) for the [DAC81404 library](https://github.com/sphCow/DAC81404_lib).
