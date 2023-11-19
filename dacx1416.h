@@ -1,6 +1,9 @@
-#include <cstdint>
-#include "Arduino.h"
-#include "SPI.h"
+#ifndef _DACX1416_H
+#define _DACX1416_H
+
+// #include <cstdint>
+#include <Arduino.h>
+#include <SPI.h>
 
 // Registers
 #define  R_NOP        0x00
@@ -10,19 +13,19 @@
 #define  R_GENCONFIG  0x04
 #define  R_BRDCONFIG  0x05
 #define  R_SYNCCONFIG 0x06
+#define  R_TOGGCONFIG 0x07 // 0x07 to 0x08
 #define  R_DACPWDWN   0x09
-#define  R_DACRANGE   0x0A
+#define  R_DACRANGE   0x0A // 0x0A to 0x0D2
 #define  R_TRIGGER    0x0E
 #define  R_BRDCAST    0x0F
-#define  R_DACA       0x10
-#define  R_DACB       0x11
-#define  R_DACC       0x12
-#define  R_DACD       0x13
+#define  R_DAC        0x10 // 0x10 to 0x1F
+#define  R_OFFSET     0x20 // 0x20 to 0x23
 
 // SPICONFIG masks
 #define TEMPALM_EN(x) (x << 11)
 #define DACBUSY_EN(x) (x << 10)
 #define CRCALM_EN(x)  (x << 9)
+#define SOFTTOGGLE_EN(x)  (x << 6)
 #define DEV_PWDWN(x)  (x << 5)
 #define CRC_EN(x)     (x << 4)
 #define SDO_EN(x)     (x << 2)
@@ -31,7 +34,7 @@
 // read mask
 #define RREG 0xC0
 
-class DAC81404 {
+class DACX1416 {
     private:
         SPIClass *_spi;
         SPISettings _spi_settings;
@@ -43,47 +46,36 @@ class DAC81404 {
 
         inline void cs_on();
         inline void cs_off();
-        
-        // TODO: datasheet says tcsh = SCLK falling edge 
-        // to SYNC rising edge time = 5 ns (min)
-        // handle with ASM nop? 
-        inline void tcsh_delay() {
-            delayMicroseconds(1);
-        }
-
-        void write_reg(uint8_t reg, uint16_t wdata);
-        uint16_t read_reg(uint8_t reg);
 
         // DACRANGE is a write only register
         // Have to keep track of individual channels manually
-        uint16_t dacrange_reg = 0;
-        
-        
-
+        uint16_t dacrange_reg[4] = {0,0,0,0};
+    
     public:
         // some enums
-        enum ChannelRange {U_5  = 0b0000, 
-                   U_6  = 0b1000, 
-                   U_10 = 0b0001, 
-                   U_12 = 0b1001, 
-                   U_20 = 0b0010, 
-                   U_24 = 0b1010, 
-                   U_40 = 0b0011, 
-                   B_5  = 0b0101, 
-                   B_6  = 0b1101, 
-                   B_10 = 0b0110, 
-                   B_12 = 0b1110, 
-                   B_20 = 0b0111}; // bipolar
+        enum ChannelRange {
+                U_5  = 0b0000, // 0 to +5V
+                U_10 = 0b0001, // 0 to +10V
+                U_20 = 0b0010, // 0 to +20V
+                U_40 = 0b0100, // 0 to +40V
+                B_2V5 = 0b1110,// -2.5 to +2.5V
+                B_5  = 0b1001, // -5 to +5V
+                B_10 = 0b1010, // -10 to +10V
+                B_20 = 0b1100};// -20 to +20V
 
         enum SyncMode {SYNC_SS=0, SYNC_LDAC};
 
         // constructor
-        DAC81404(int cspin, int rstpin = -1, int ldacpin = -1,
+        DACX1416(int cspin, int rstpin = -1, int ldacpin = -1,
                  SPIClass *spi = &SPI, uint32_t spi_clock_hz=8000000);
 
-        int init();
-        
-        // Hard-Reset
+        bool init();
+
+        void write_reg(uint8_t reg, uint16_t wdata);
+        uint16_t read_reg(uint8_t reg);
+
+        // Hard-Reset or soft-reset
+        void reset();
         
         // DAC power up/down
         // TODO: set/clear DAC_PWDWN bit in SPICONFIG reg
@@ -94,7 +86,7 @@ class DAC81404 {
 
         // Reference
         void set_int_reference(bool state);
-        int get_int_reference();
+        bool get_int_reference();
         
         // Status
 
@@ -106,5 +98,7 @@ class DAC81404 {
         void set_out(int ch, uint16_t val);
 
         // sync 
-        void set_sync(int ch, SyncMode);
+        void set_sync(int ch, SyncMode mode);
 };
+
+#endif
